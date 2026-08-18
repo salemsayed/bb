@@ -107,6 +107,7 @@ import {
   type DesktopBrowserWindowCreator,
   type DesktopWindowFactory,
 } from "./desktop-window-factory.js";
+import { shouldUseLinuxFramelessWindow } from "./desktop-window-frame.js";
 import { registerDesktopContextMenu } from "./desktop-context-menu.js";
 import { resolveBbDesktopPlatform } from "./desktop-platform.js";
 import {
@@ -2258,6 +2259,10 @@ async function runDesktopApp(): Promise<void> {
     displayWorkAreas: null,
     icon: nativeImage.createFromPath(iconPath),
     isMac: process.platform === "darwin",
+    isLinuxFrameless: shouldUseLinuxFramelessWindow({
+      argv: process.argv,
+      platform: process.platform,
+    }),
     isQuitting() {
       return quitting;
     },
