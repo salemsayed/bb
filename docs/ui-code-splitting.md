@@ -106,7 +106,14 @@ config. Priority plugin bundles and styles preload as soon as the list resolves.
 Activation still waits for system config. Pages without expected providers or a plugin panel
 retain deferred boot after the screen paints and browser idle, with a 1.5-second
 fallback. Once booted, plugins the page does not need wait for the screen paint
-before downloading. Plugin activation does not wait for the toaster to mount; startup
+before downloading. On a thread route they also wait until the timeline has
+shown its first rows (or settled on empty or an error), at most 10 seconds after
+the page started: `ThreadTimelineSurface` calls `markScreenContentShown()` and
+the boot waits on `whenScreenContentShown()`. The plugins that drew code fences,
+message directives or timeline renderers last session load first on thread
+routes, alongside the surface providers, so the rows render with them. Until a
+session has recorded that set (`useRememberMessageContentProviders`), thread
+routes keep the screen-paint rule alone. Plugin activation does not wait for the toaster to mount; startup
 notifications queue until it attaches, including custom plugin toasts.
 SDK Markdown, source-code, and diff wrappers use preload-tier splits. After
 plugin registration settles, the app also queues the selected built-in source

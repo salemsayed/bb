@@ -7,10 +7,18 @@ import {
   resetPluginFrontendBootStateForTest,
 } from "./plugin-frontend-boot-state";
 import {
+  resetPluginSlotStoreForTest,
+  setPluginSlotRegistrations,
+} from "./plugin-slots";
+import {
   expectedSurfaceProviderIds,
+  frontendPriorityPluginIds,
+  otherPluginsWaitForThreadContent,
   useRememberSurfaceProvider,
   type PluginSurface,
 } from "./plugin-surface-providers";
+import { makePluginRegistrationSet } from "@/test/fixtures/plugins";
+import { useRememberMessageContentProviders } from "@/hooks/useRememberMessageContentProviders";
 
 function renderProvider(surface: PluginSurface, pluginId: string | null) {
   return renderHook(
@@ -21,6 +29,7 @@ function renderProvider(surface: PluginSurface, pluginId: string | null) {
 
 afterEach(() => {
   cleanup();
+  resetPluginSlotStoreForTest();
   resetPluginFrontendBootStateForTest();
   window.localStorage.clear();
 });
@@ -58,5 +67,58 @@ describe("expectedSurfaceProviderIds", () => {
       "bb--composer",
       "navigation",
     ]);
+  });
+});
+
+const THREAD_PATH = "/projects/proj_a/threads/thr_a";
+
+function Fence() {
+  return null;
+}
+
+function registerFenceRenderer(pluginId: string) {
+  setPluginSlotRegistrations(
+    pluginId,
+    makePluginRegistrationSet({
+      codeFenceRenderers: [
+        { id: "card", languages: ["card"], component: Fence },
+      ],
+    }),
+  );
+}
+
+describe("message content providers", () => {
+  it("leaves thread routes on the screen-paint rule until a finished boot records who draws message content", () => {
+    registerFenceRenderer("cards");
+    markPluginFrontendBootStarted();
+    renderHook(() => useRememberMessageContentProviders());
+
+    expect(otherPluginsWaitForThreadContent(THREAD_PATH)).toBe(false);
+    expect(frontendPriorityPluginIds(THREAD_PATH)).not.toContain("cards");
+
+    act(() => markPluginFrontendsSettled());
+    expect(otherPluginsWaitForThreadContent(THREAD_PATH)).toBe(true);
+    expect(frontendPriorityPluginIds(THREAD_PATH)).toContain("cards");
+  });
+
+  it("loads the remembered content plugins first only on thread routes", () => {
+    registerFenceRenderer("cards");
+    markPluginFrontendBootStarted();
+    markPluginFrontendsSettled();
+    renderHook(() => useRememberMessageContentProviders());
+
+    expect(frontendPriorityPluginIds("/")).not.toContain("cards");
+    expect(otherPluginsWaitForThreadContent("/")).toBe(false);
+  });
+
+  it("records an empty set once boot completes without content plugins, so threads still wait for their rows", () => {
+    markPluginFrontendBootStarted();
+    markPluginFrontendsSettled();
+    renderHook(() => useRememberMessageContentProviders());
+
+    expect(otherPluginsWaitForThreadContent(THREAD_PATH)).toBe(true);
+    expect(frontendPriorityPluginIds(THREAD_PATH)).toEqual(
+      expectedSurfaceProviderIds(),
+    );
   });
 });

@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { z } from "zod";
 import { createLastKnownCache } from "@/lib/last-known-cache";
 import { usePluginFrontendBootComplete } from "@/lib/plugin-frontend-boot-state";
-import { getRouteOwnerPluginId } from "@/lib/route-paths";
+import {
+  getRouteOwnerPluginId,
+  getThreadRouteThreadId,
+} from "@/lib/route-paths";
 
 const PLUGIN_SURFACES = [
   "composer",
@@ -40,14 +43,50 @@ export function expectedSurfaceProviderIds(): string[] {
   return [...new Set(ids)];
 }
 
+const messageContentProviderCache = createLastKnownCache({
+  prefix: "bb.plugin-message-content-providers",
+  version: "1",
+  schema: z.object({ pluginIds: z.array(z.string().min(1)) }),
+});
+
+function rememberedMessageContentProviderIds(): string[] | null {
+  return (
+    messageContentProviderCache.read(messageContentProviderCache.key())
+      ?.pluginIds ?? null
+  );
+}
+
 export function frontendPriorityPluginIds(pathname: string): string[] {
   const routePluginId = getRouteOwnerPluginId(pathname);
+  const messageContentProviderIds =
+    getThreadRouteThreadId(pathname) === null
+      ? []
+      : (rememberedMessageContentProviderIds() ?? []);
   return [
     ...new Set([
       ...(routePluginId === null ? [] : [routePluginId]),
       ...expectedSurfaceProviderIds(),
+      ...messageContentProviderIds,
     ]),
   ];
+}
+
+export function otherPluginsWaitForThreadContent(pathname: string): boolean {
+  return (
+    getThreadRouteThreadId(pathname) !== null &&
+    rememberedMessageContentProviderIds() !== null
+  );
+}
+
+export function rememberMessageContentProviders(
+  pluginIds: readonly string[],
+): void {
+  const sorted = [...new Set(pluginIds)].sort();
+  const key = messageContentProviderCache.key();
+  const remembered = messageContentProviderCache.read(key)?.pluginIds;
+  if (remembered?.join("\n") !== sorted.join("\n")) {
+    messageContentProviderCache.write(key, { pluginIds: sorted });
+  }
 }
 
 export function useRememberSurfaceProvider(

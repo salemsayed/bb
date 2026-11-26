@@ -7,6 +7,7 @@ import { ConversationTimeline } from "@/components/ui/conversation.js";
 import { HeightTransition } from "@/components/ui/height-transition.js";
 import { Icon } from "@bb/shared-ui/icon";
 import { isRouteLoadingSkeletonMounted } from "@/components/ui/route-loading-skeleton";
+import { markScreenContentShown } from "@/lib/screen-paint";
 import { toUserAttachmentImageSrc } from "@/lib/user-attachment-images";
 import {
   SHORT_LIVED_STATUS_DELAY_MS,
@@ -189,6 +190,9 @@ export function ThreadTimelineSurface({
   const isOngoingIndicatorVisible =
     showOngoingIndicator &&
     (timelineRowsWithPendingStop.length > 0 || isOngoingIndicatorSustained);
+  useEffect(() => {
+    if (!isThreadTimelinePending) markScreenContentShown();
+  }, [isThreadTimelinePending]);
   const showLoadOlderRows =
     hasOlderTimelineRows &&
     onLoadOlderRows !== undefined &&

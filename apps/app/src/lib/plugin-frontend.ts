@@ -46,7 +46,10 @@ import {
   prefetchPluginCss,
   retainPluginCss,
 } from "./plugin-css";
-import { frontendPriorityPluginIds } from "./plugin-surface-providers";
+import {
+  frontendPriorityPluginIds,
+  otherPluginsWaitForThreadContent,
+} from "./plugin-surface-providers";
 import { prefetchPluginModule } from "./plugin-module-preload";
 import {
   collectPluginAppRegistrations,
@@ -69,7 +72,7 @@ import {
   type RestoredLazyPart,
 } from "./restored-lazy-parts";
 import { readStoredPanelTabs } from "./fixed-panel-tabs-state";
-import { whenScreenPainted } from "./screen-paint";
+import { whenScreenContentShown, whenScreenPainted } from "./screen-paint";
 import {
   pluginSdkAppImplementation,
   retiredPluginSdkAppMembers,
@@ -1228,10 +1231,19 @@ export function bootPluginFrontends(): Promise<void> {
     startRestoredCoreContributionParts(
       browserReconcileDeps.restoredLazyParts(),
     );
+    const waitForThreadContent = otherPluginsWaitForThreadContent(
+      window.location.pathname,
+    );
     await reconcilePluginFrontends(state, {
       ...browserReconcileDeps,
       fetchCandidates: () =>
         fetchFrontendCandidates(appQueryClient, "reuse-cached"),
+      whenScreenPainted: waitForThreadContent
+        ? async () => {
+            await whenScreenPainted();
+            await whenScreenContentShown();
+          }
+        : whenScreenPainted,
     });
     publishLoadFailed();
   })().catch((error: unknown) => {

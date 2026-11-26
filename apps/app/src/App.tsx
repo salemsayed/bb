@@ -30,6 +30,7 @@ import { useAppTheme } from "./hooks/useAppTheme";
 import { useFaviconColorSync } from "./lib/favicon-color-preference";
 import { useDesktopThemeSync } from "./hooks/useDesktopThemeSync";
 import { usePluginFrontendBoot } from "./hooks/usePluginFrontendBoot";
+import { useRememberMessageContentProviders } from "./hooks/useRememberMessageContentProviders";
 import { useCodeRendererPreloads } from "./hooks/useCodeRendererPreloads";
 import { ScreenPaintSignal } from "./components/ScreenPaintSignal";
 import { useRememberPluginNavPanelChrome } from "@/lib/plugin-nav-panel-chrome";
@@ -473,6 +474,7 @@ export function App() {
   useAppTheme();
   useFaviconColorSync();
   usePluginFrontendBoot();
+  useRememberMessageContentProviders();
   useCodeRendererPreloads();
   useRememberPluginNavPanelChrome();
 
